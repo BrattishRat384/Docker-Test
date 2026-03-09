@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous AI Thinker</title>
+    <style>
+        /* Dark Theme Styling */
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* The Output Area */
+        .text-container {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 2rem;
+            height: 70vh; /* Takes up most of the screen */
+            overflow-y: auto;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #ffffff;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Status indicator */
+        #status {
+            font-size: 0.9rem;
+            color: #ff9800; /* Orange for thinking/waiting */
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .message {
+            margin-bottom: 2rem;
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #4CAF50; /* Hacker green */
+            border-left: 2px solid #333;
+            padding-left: 1rem;
+        }
+
+        /* Hide the repetitive "Continue your thought" auto-prompts from the UI */
+        .user { 
+            display: none; 
+        } 
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>
+            <span>Autonomous AI Stream</span>
+            <span id="status">Initializing...</span>
+        </h2>
+        <div class="text-container" id="chat-box">
+            </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const statusText = document.getElementById('status');
+        let isGenerating = false;
+
+        function renderThoughts(history) {
+            chatBox.innerHTML = '';
+            history.forEach(msg => {
+                // We only render the AI's thoughts, hiding our automated trigger prompts
+                if (msg.role === 'assistant') {
+                    const div = document.createElement('div');
+                    div.className = `message`;
+                    div.textContent = msg.content;
+                    chatBox.appendChild(div);
+                }
+            });
+            // Auto-scroll to the newest thought
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function triggerNextThought() {
+            if (isGenerating) return; // Prevent overlapping requests
+            
+            isGenerating = true;
+            statusText.textContent = "Synthesizing next thought...";
+            statusText.style.color = "#4CAF50"; // Green for active
+
+            fetch('/generate-next')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error:', data.error);
+                        statusText.textContent = "Error generating thought.";
+                        statusText.style.color = "#f44336"; // Red for error
+                    } else {
+                        renderThoughts(data.history);
+                        statusText.textContent = "Waiting for next cycle...";
+                        statusText.style.color = "#ff9800"; // Orange for waiting
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    statusText.textContent = "Connection lost.";
+                })
+                .finally(() => {
+                    isGenerating = false;
+                });
+        }
+
+        // 1. Trigger the very first thought immediately on load
+        triggerNextThought();
+
+        // 2. Trigger the next thought every 2 minutes (120,000 milliseconds)
+        setInterval(triggerNextThought, 120000); 
+    </script>
+</body>
+</html>
